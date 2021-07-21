@@ -9,8 +9,8 @@ let game = {
   platform: null,
   ball: null,
   blocks: [],
-  cols: 1,
-  rows: 1,
+  cols: 8,
+  rows: 4,
   width: 640,
   height: 360,
   sprites: {
