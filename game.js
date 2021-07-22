@@ -19,38 +19,59 @@ let game = {
     platform: null,
     block: null,
   },
+  sounds: {
+    bump: null,
+  },
   score: 0,
   running: true,
   init: function () {
     this.ctx = document.getElementById("myCanvas").getContext("2d");
     this.setEvent();
+    this.setTextFont();
   },
-
+  setTextFont() {
+    this.ctx.font = "20px Arial";
+    this.ctx.fillStyle = "white";
+  },
   preload(callback) {
     let loaded = 0;
     let required = Object.keys(this.sprites).length;
+    required += Object.keys(this.sounds).length;
 
-    let onImageLoaded = () => {
+    let onResourceLoaded = () => {
       loaded++;
       if (loaded >= required) {
         callback();
       }
     };
 
+    this.preloadSprites(onResourceLoaded);
+    this.preloadSounds(onResourceLoaded);
+  },
+
+  preloadSprites(onResourceLoaded) {
     for (const key in this.sprites) {
       this.sprites[key] = new Image();
       this.sprites[key].src = `img/${key}.png`;
 
-      this.sprites[key].addEventListener("load", onImageLoaded);
+      this.sprites[key].addEventListener("load", onResourceLoaded);
     }
   },
-
+  preloadSounds(onResourceLoaded) {
+    for (const key in this.sounds) {
+      this.sounds[key] = new Audio();
+      this.sounds[key].src = `sounds/${key}.mp3`;
+      this.sounds[key].addEventListener("canplaythrough", onResourceLoaded, {
+        once: true,
+      });
+    }
+  },
   render() {
     this.ctx.clearRect(0, 0, this.width, this.height);
     this.ctx.drawImage(this.sprites.background, 0, 0);
     this.ctx.drawImage(
       this.sprites.ball,
-      0,
+      this.ball.frame * this.ball.width,
       0,
       this.ball.width,
       this.ball.height,
@@ -61,6 +82,8 @@ let game = {
     );
     this.ctx.drawImage(this.sprites.platform, this.platform.x, this.platform.y);
     this.renderBlocks();
+
+    this.ctx.fillText("Score: " + this.score, 20, 25);
   },
   renderBlocks() {
     for (let block of this.blocks) {
@@ -103,7 +126,7 @@ let game = {
   addScore() {
     this.score++;
     if (this.score >= this.blocks.length) {
-      this.end('WIN');
+      this.end("WIN");
     }
   },
   update() {
@@ -119,12 +142,14 @@ let game = {
       if (this.ball.collide(block) && block.active) {
         this.ball.bumbBlock(block);
         this.addScore();
+        this.sounds.bump.play();
       }
     }
   },
   collidePlatform() {
     if (this.ball.collide(this.platform)) {
       this.ball.bumbPlatform(this.platform);
+      this.sounds.bump.play();
     }
   },
 
@@ -136,7 +161,6 @@ let game = {
         this.run();
       });
     }
-
   },
   random(min, max) {
     return Math.floor(Math.random() * (max - min + 1) + min);
@@ -159,12 +183,23 @@ game.ball = {
   y: 280,
   width: 20,
   height: 20,
+  frame: 0,
 
   start() {
     this.dy = -this.velocity;
     this.dx = game.random(-this.velocity, this.velocity);
+    console.log(this.dx);
+    this.animate();
   },
 
+  animate() {
+    setInterval(() => {
+      this.frame++;
+      if (this.frame > 3) {
+        this.frame = 0;
+      }
+    }, 100);
+  },
   move() {
     if (this.dy) {
       this.y += this.dy;
@@ -197,12 +232,15 @@ game.ball = {
 
     if (ballLeft < 0) {
       this.dx *= -1;
+      game.sounds.bump.play();
     } else if (ballRight > game.width) {
       this.dx *= -1;
+      game.sounds.bump.play();
     } else if (ballTop < 0) {
       this.dy *= -1;
+      game.sounds.bump.play();
     } else if (ballBottom > game.height) {
-      game.end('game over!');
+      game.end("game over!");
     }
   },
   bumbBlock(block) {
@@ -219,7 +257,6 @@ game.ball = {
       let touchX = this.x + this.width / 2;
       this.dx = this.velocity * game.platform.getTouchOffset(touchX);
     }
-
   },
 };
 
@@ -255,7 +292,6 @@ game.platform = {
       this.x += this.dx;
       if (this.ball) {
         this.ball.x += this.dx;
-
       }
     }
   },
